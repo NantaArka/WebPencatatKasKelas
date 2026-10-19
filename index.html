@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Buku Kas Kelas - Weekly Class Fund Manager</title>
+  <meta name="description" content="Aplikasi pencatatan uang kas mingguan kelas dengan nominal fleksibel, sinkronisasi Google Cloud Firestore real-time, dan ekspor spreadsheet.">
+
+  <link href="./dist/output.css" rel="stylesheet">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .tab-active { color: #059669; border-color: #059669; background-color: #ecfdf5; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-zinc-50 text-zinc-900 min-h-screen flex flex-col antialiased selection:bg-emerald-100 selection:text-emerald-900 pb-10">
+
+  <!-- CLOUD SYNC SPINNER -->
+  <div id="syncLoader" class="fixed inset-0 z-50 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center transition-opacity duration-300">
+    <div class="w-10 h-10 rounded-full border-4 border-emerald-200 border-t-emerald-600 animate-spin mb-3"></div>
+    <p class="text-sm font-semibold text-zinc-800">Menghubungkan ke Cloud Firestore...</p>
+    <p class="text-xs text-zinc-400 mt-1">Sinkronisasi real-time multi-perangkat</p>
+  </div>
+
+  <!-- STICKY TOPBAR -->
+  <header class="bg-white border-b border-zinc-200 sticky top-0 z-30 shadow-xs">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-sm shadow-xs shrink-0">Rp</div>
+          <div>
+            <div class="flex items-center space-x-1.5">
+              <h1 class="text-base font-bold text-zinc-900 leading-tight" id="headerClassName">Kas Kelas</h1>
+              <button id="btnEditClassMeta" class="admin-only hidden text-zinc-400 hover:text-emerald-700 p-1 rounded" title="Ubah Nama & Tarif Kelas">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+              </button>
+            </div>
+            <div class="flex items-center space-x-2 text-xs text-zinc-500">
+              <span>Tarif: <b id="headerTariff" class="text-zinc-800 font-semibold">Rp 5.000</b>/mgu</span>
+              <span class="text-zinc-300">•</span>
+              <span class="inline-flex items-center text-[11px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1"></span> Live Cloud
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="sm:hidden" id="mobileAuthSlot"></div>
+      </div>
+
+      <!-- Actions Bar -->
+      <div class="flex items-center justify-between sm:justify-end flex-wrap gap-2">
+        <div class="flex items-center space-x-1.5 bg-zinc-100 px-2.5 py-1.5 rounded-xl border border-zinc-200">
+          <svg class="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <input type="month" id="filterMonthYear" class="bg-transparent text-xs font-semibold text-zinc-800 focus:outline-none cursor-pointer" />
+        </div>
+
+        <button id="btnOpenTxModal" class="admin-only hidden inline-flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-xl shadow-xs transition min-h-[38px]">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span>Catat Kas</span>
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div class="relative">
+          <button id="btnSpreadsheetMenu" class="inline-flex items-center space-x-1.5 bg-white hover:bg-zinc-100 text-zinc-700 text-xs font-semibold px-3 py-2 rounded-xl border border-zinc-200 transition min-h-[38px]">
+            <svg class="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <span class="hidden sm:inline">Data / CSV</span>
+            <svg class="w-3 h-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div id="spreadsheetMenuDropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-zinc-200 py-2 z-50 text-xs">
+            <div class="px-3 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Ekspor Excel / Sheets</div>
+            <button id="btnExportTxCsv" class="w-full text-left px-3.5 py-2 hover:bg-zinc-50 flex items-center space-x-2 text-zinc-700">
+              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <span>Unduh Buku Kas (CSV)</span>
+            </button>
+            <button id="btnExportStudentsCsv" class="w-full text-left px-3.5 py-2 hover:bg-zinc-50 flex items-center space-x-2 text-zinc-700">
+              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>Unduh Rekap Iuran (CSV)</span>
+            </button>
+            <div class="admin-only hidden border-t border-zinc-100 my-1"></div>
+            <label class="admin-only hidden w-full text-left px-3.5 py-2 hover:bg-zinc-50 flex items-center space-x-2 text-zinc-700 cursor-pointer">
+              <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              <span>Impor Transaksi CSV</span>
+              <input type="file" id="fileImportCsv" accept=".csv,text/csv" class="hidden" />
+            </label>
+            <button id="btnOpenChangePinModal" class="admin-only hidden w-full text-left px-3.5 py-2 hover:bg-zinc-50 flex items-center space-x-2 text-zinc-700">
+              <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+              <span>Ganti PIN Bendahara</span>
+            </button>
+            <button id="btnResetData" class="admin-only hidden w-full text-left px-3.5 py-2 hover:bg-rose-50 flex items-center space-x-2 text-rose-600 border-t border-zinc-100 mt-1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              <span>Reset Data ke Bawaan</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="hidden sm:block" id="desktopAuthSlot"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- PUBLIC VIEWER NOTICE -->
+  <div id="viewerNoticeBanner" class="bg-amber-500/10 border-b border-amber-200/70 px-4 py-2 text-xs text-amber-900">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span class="text-[12px]"><strong>Mode Publik:</strong> Transparansi kas kelas untuk seluruh siswa & wali murid. Masuk bendahara untuk menginput iuran.</span>
+      </div>
+      <button id="bannerLoginLink" class="font-bold underline text-amber-900 hover:text-amber-700 ml-2 whitespace-nowrap text-xs">Masuk PIN</button>
+    </div>
+  </div>
+
+  <!-- MAIN WRAPPER -->
+  <main class="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 space-y-5 flex-1">
+
+    <!-- FINANCIAL STAT CARDS -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="bg-white p-4 rounded-2xl border border-zinc-200 shadow-xs">
+        <div class="flex items-center justify-between text-zinc-500 text-xs font-medium mb-1">
+          <span>Saldo Kas Saat Ini</span>
+          <span class="p-1 rounded-lg bg-emerald-50 text-emerald-600 font-bold text-xs">IDR</span>
+        </div>
+        <div class="text-2xl font-extrabold text-zinc-900 tracking-tight" id="statTotalBalance">Rp 0</div>
+        <div class="mt-1 text-[11px] text-zinc-400">Total akumulasi kas tersedia</div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-zinc-200 shadow-xs">
+        <div class="flex items-center justify-between text-zinc-500 text-xs font-medium mb-1">
+          <span>Pemasukan Bulan Ini</span>
+          <span class="p-1 rounded-lg bg-emerald-50 text-emerald-600 font-bold text-xs">+</span>
+        </div>
+        <div class="text-2xl font-extrabold text-emerald-600 tracking-tight" id="statMonthIncome">Rp 0</div>
+        <div class="mt-1 text-[11px] text-emerald-700 font-medium" id="statIncomeBreakdown">Iuran & kas masuk</div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-zinc-200 shadow-xs">
+        <div class="flex items-center justify-between text-zinc-500 text-xs font-medium mb-1">
+          <span>Pengeluaran Bulan Ini</span>
+          <span class="p-1 rounded-lg bg-rose-50 text-rose-600 font-bold text-xs">-</span>
+        </div>
+        <div class="text-2xl font-extrabold text-rose-600 tracking-tight" id="statMonthExpense">Rp 0</div>
+        <div class="mt-1 text-[11px] text-rose-700 font-medium" id="statExpenseBreakdown">0 transaksi pengeluaran</div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-zinc-200 shadow-xs">
+        <div class="flex items-center justify-between text-zinc-500 text-xs font-medium mb-1">
+          <span>Kepatuhan Iuran</span>
+          <span class="text-xs text-zinc-400 font-medium" id="statPaidRatio">0/0 slot</span>
+        </div>
+        <div class="text-2xl font-extrabold text-zinc-900 tracking-tight" id="statCollectionPercent">0%</div>
+        <div class="mt-2 w-full bg-zinc-100 rounded-full h-2 overflow-hidden">
+          <div id="statProgressBar" class="bg-emerald-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NAVIGATION TABS -->
+    <div class="border-b border-zinc-200">
+      <nav class="flex space-x-2 sm:space-x-4 overflow-x-auto no-scrollbar py-1">
+        <button id="tabTracker" class="tab-active py-2 px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition border border-transparent whitespace-nowrap min-h-[40px] flex items-center space-x-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <span>Pelacak Iuran Siswa</span>
+        </button>
+        <button id="tabLedger" class="py-2 px-3.5 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 hover:text-zinc-900 transition border border-transparent whitespace-nowrap min-h-[40px] flex items-center space-x-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <span>Buku Transaksi Kas</span>
+        </button>
+        <button id="tabSummary" class="hidden py-2 px-3.5 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 hover:text-zinc-900 transition border border-transparent whitespace-nowrap min-h-[40px] flex items-center space-x-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span>Laporan & Analisis</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- VIEW 1: WEEKLY STUDENT PAYMENT TRACKER -->
+    <section id="viewTracker" class="space-y-4">
+      <div class="bg-white p-3 rounded-2xl border border-zinc-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div class="relative flex-1 sm:w-72">
+          <input type="text" id="searchStudent" placeholder="Cari nama siswa..." class="w-full text-xs sm:text-sm pl-9 pr-3 py-2 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-zinc-50 focus:bg-white" />
+          <svg class="w-4 h-4 text-zinc-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </div>
+
+        <div class="flex items-center space-x-2 justify-end">
+          <!-- Legend -->
+          <div class="flex items-center space-x-2 text-[11px] text-zinc-500 mr-2">
+            <span class="inline-flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1"></span> Lunas</span>
+            <span class="inline-flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 mr-1"></span> Sebagian</span>
+            <span class="inline-flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-zinc-300 mr-1"></span> Belum</span>
+          </div>
+
+          <button id="btnOpenStudentModal" class="admin-only hidden inline-flex items-center space-x-1 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-semibold py-2 px-3 rounded-xl border border-emerald-200 transition min-h-[38px]">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+            <span>Kelola Siswa</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- DESKTOP TABLE -->
+      <div class="hidden sm:block bg-white rounded-2xl border border-zinc-200 shadow-xs overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead class="bg-zinc-50 border-b border-zinc-200 text-zinc-600 font-semibold uppercase text-[11px] tracking-wider">
+              <tr>
+                <th class="py-3 px-4 w-12 text-center">No</th>
+                <th class="py-3 px-4 min-w-[180px]">Nama Siswa</th>
+                <th class="py-3 px-3 text-center w-28">Minggu 1</th>
+                <th class="py-3 px-3 text-center w-28">Minggu 2</th>
+                <th class="py-3 px-3 text-center w-28">Minggu 3</th>
+                <th class="py-3 px-3 text-center w-28">Minggu 4</th>
+                <th class="py-3 px-4 text-right w-32">Total Bayar</th>
+                <th class="py-3 px-3 text-center w-28">Status</th>
+              </tr>
+            </thead>
+            <tbody id="studentTableBody" class="divide-y divide-zinc-100 text-zinc-700">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MOBILE CARDS -->
+      <div id="studentMobileCards" class="sm:hidden space-y-2.5">
+        <!-- Rendered via JS -->
+      </div>
+
+      <div class="flex items-center justify-between text-xs text-zinc-400 px-1">
+        <p id="trackerHintText">💡 Klik nominal minggu untuk membuka pengisian nominal iuran kas.</p>
+        <span id="trackerTotalStudentsLabel" class="font-medium text-zinc-500">10 Siswa Terdaftar</span>
+      </div>
+    </section>
+
+    <!-- VIEW 2: LEDGER -->
+    <section id="viewLedger" class="space-y-4 hidden">
+      <div class="bg-white p-3 rounded-2xl border border-zinc-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="relative flex-1 sm:flex-initial">
+            <input type="text" id="searchTx" placeholder="Cari transaksi..." class="text-xs sm:text-sm pl-9 pr-3 py-2 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-64 bg-zinc-50 focus:bg-white" />
+            <svg class="w-4 h-4 text-zinc-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+          <select id="filterTxType" class="text-xs sm:text-sm py-2 px-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700">
+            <option value="ALL">Semua Tipe</option>
+            <option value="INCOME">Pemasukan (+)</option>
+            <option value="EXPENSE">Pengeluaran (-)</option>
+          </select>
+          <select id="filterTxCategory" class="text-xs sm:text-sm py-2 px-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700">
+            <option value="ALL">Semua Kategori</option>
+            <option value="Iuran Kas">Iuran Kas Siswa</option>
+            <option value="Donasi / Sponsor">Donasi / Sponsor</option>
+            <option value="Alat & Kebersihan">Alat & Kebersihan</option>
+            <option value="Fotokopi & Modul">Fotokopi & Modul</option>
+            <option value="Konsumsi & Kegiatan">Konsumsi & Kegiatan</option>
+            <option value="Sosial / Menjenguk">Sosial / Menjenguk</option>
+            <option value="Lainnya">Lainnya</option>
+          </select>
+        </div>
+        <div class="text-xs text-zinc-500">Total: <span id="ledgerCountDisplay" class="font-bold text-zinc-800">0</span> transaksi</div>
+      </div>
+
+      <div class="hidden sm:block bg-white rounded-2xl border border-zinc-200 shadow-xs overflow-hidden">
+        <table class="w-full text-left text-xs sm:text-sm">
+          <thead class="bg-zinc-50 border-b border-zinc-200 text-zinc-600 font-semibold uppercase text-[11px]">
+            <tr>
+              <th class="py-3 px-4 w-28">Tanggal</th>
+              <th class="py-3 px-3 w-28">Tipe</th>
+              <th class="py-3 px-3 w-36">Kategori</th>
+              <th class="py-3 px-4">Keterangan / Keperluan</th>
+              <th class="py-3 px-4 text-right w-36">Nominal</th>
+              <th class="py-3 px-4 text-center w-20 admin-only hidden">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="txTableBody" class="divide-y divide-zinc-100 text-zinc-700"></tbody>
+        </table>
+      </div>
+
+      <div id="txMobileCards" class="sm:hidden space-y-2.5"></div>
+    </section>
+
+    <!-- VIEW 3: SUMMARY & ANALYSIS -->
+    <section id="viewSummary" class="space-y-5 hidden">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white p-4 rounded-2xl border border-zinc-200 shadow-xs">
+          <h2 class="text-sm font-bold text-zinc-900 border-b border-zinc-100 pb-2.5 flex items-center justify-between">
+            <span>Perbandingan Arus Kas Bulanan</span>
+            <span id="reportMonthLabel" class="text-xs font-semibold text-zinc-500">Bulan Ini</span>
+          </h2>
+          <div class="mt-3.5 space-y-3 text-xs">
+            <div class="p-3 bg-zinc-50 rounded-xl border border-zinc-200/70">
+              <span class="text-[11px] text-zinc-500 font-bold block mb-1">Periode Terpilih (<span id="compCurLabel">-</span>)</span>
+              <div class="flex justify-between font-semibold">
+                <span class="text-emerald-700">Masuk: <b id="compCurIncome">Rp 0</b></span>
+                <span class="text-rose-700">Keluar: <b id="compCurExpense">Rp 0</b></span>
+                <span class="text-zinc-900 font-extrabold">Net: <b id="compCurNet">Rp 0</b></span>
+              </div>
+            </div>
+            <div class="p-3 bg-zinc-50 rounded-xl border border-zinc-200/70">
+              <span class="text-[11px] text-zinc-500 font-bold block mb-1">Bulan Sebelumnya (<span id="compPrevLabel">-</span>)</span>
+              <div class="flex justify-between font-semibold">
+                <span class="text-emerald-700">Masuk: <b id="compPrevIncome">Rp 0</b></span>
+                <span class="text-rose-700">Keluar: <b id="compPrevExpense">Rp 0</b></span>
+                <span class="text-zinc-900 font-extrabold">Net: <b id="compPrevNet">Rp 0</b></span>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl border border-zinc-200 bg-white">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-zinc-600 font-medium">Perubahan Arus Kas:</span>
+                <span id="compNetDiff" class="font-bold text-zinc-900">0%</span>
+              </div>
+              <p id="compInsightText" class="text-zinc-500 text-[11px]">Pemasukan dan iuran kas kelas tercatat dan tersinkron secara online.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-zinc-200 shadow-xs">
+          <h2 class="text-sm font-bold text-zinc-900 border-b border-zinc-100 pb-2.5">Rincian Pengeluaran</h2>
+          <div id="categoryBreakdownContainer" class="mt-3.5 space-y-2.5"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="mt-auto border-t border-zinc-200 bg-white py-3.5 text-center text-xs text-zinc-400">
+    <p>Buku Kas Kelas &bull; Cloud Firestore Live Sync & Ekspor Spreadsheet</p>
+  </footer>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- MODAL: QUICK NOMINAL PAYMENT ENTRY -->
+  <div id="modalPaymentEntry" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl border border-zinc-200 max-w-sm w-full overflow-hidden transition-all duration-200 p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-zinc-100 pb-2.5">
+        <div>
+          <h3 class="text-sm font-bold text-zinc-900" id="entryStudentName">Input Iuran Siswa</h3>
+          <p class="text-xs text-zinc-400" id="entryWeekInfo">Minggu 1</p>
+        </div>
+        <button type="button" id="btnClosePaymentModal" class="text-zinc-400 hover:text-zinc-600 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <form id="formNominalPayment" class="space-y-3.5">
+        <input type="hidden" id="entryStudentId" />
+        <input type="hidden" id="entryWeekNum" />
+
+        <div>
+          <label class="block text-xs font-semibold text-zinc-700 mb-1">Nominal Pembayaran (Rp)</label>
+          <div class="relative">
+            <span class="absolute left-3 top-2.5 font-bold text-zinc-400 text-xs">Rp</span>
+            <input type="number" id="inputCustomAmount" min="0" step="500" required placeholder="0" class="w-full pl-9 pr-3 py-2 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-zinc-900 text-base" />
+          </div>
+          <p class="text-[11px] text-zinc-400 mt-1">Tarif acuan mingguan: <span id="entryTariffRef" class="font-semibold text-zinc-700">Rp 5.000</span></p>
+        </div>
+
+        <!-- Quick Preset Buttons -->
+        <div>
+          <label class="block text-[11px] font-semibold text-zinc-500 mb-1.5 uppercase">Pilihan Cepat</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" id="btnPresetFull" class="p-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-bold hover:bg-emerald-100 transition text-center">
+              Lunas Penuh
+            </button>
+            <button type="button" id="btnPresetHalf" class="p-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100 transition text-center">
+              Setengah
+            </button>
+            <button type="button" id="btnPresetClear" class="p-2 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-600 text-xs font-bold hover:bg-zinc-100 transition text-center">
+              Hapus (Rp 0)
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-zinc-100">
+          <button type="button" id="btnCancelPaymentModal" class="px-3.5 py-2 rounded-xl border border-zinc-200 text-zinc-600 text-xs font-semibold hover:bg-zinc-50">Batal</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs">Simpan ke Cloud</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: PIN LOGIN -->
+  <div id="modalLogin" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl border border-zinc-200 max-w-sm w-full overflow-hidden p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-zinc-100 pb-2">
+        <h3 class="text-sm font-bold text-zinc-900">Masuk sebagai Bendahara</h3>
+        <button type="button" id="btnCloseLoginModal" class="text-zinc-400 hover:text-zinc-600 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="formLoginPin" class="space-y-3.5">
+        <p class="text-xs text-zinc-500">Masukkan 4-digit PIN bendahara untuk membuka akses pengisian kas & iuran.</p>
+        <div>
+          <input type="password" id="inputAdminPin" maxlength="8" placeholder="••••" required class="w-full text-center text-2xl font-mono tracking-widest px-3 py-2.5 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900" />
+          <p id="loginErrorMessage" class="text-xs text-rose-600 mt-1 hidden font-medium">PIN yang Anda masukkan salah.</p>
+          <p class="text-[11px] text-zinc-400 mt-1">PIN bawaan default: <code class="bg-zinc-100 px-1 py-0.5 rounded text-zinc-700 font-mono font-bold">1234</code></p>
+        </div>
+        <div class="flex items-center justify-end space-x-2 pt-2">
+          <button type="button" id="btnCancelLoginModal" class="px-3.5 py-2 rounded-xl border border-zinc-200 text-zinc-600 text-xs font-semibold hover:bg-zinc-50">Batal</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs">Buka Akses</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CHANGE PIN -->
+  <div id="modalChangePin" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl border border-zinc-200 max-w-sm w-full overflow-hidden p-5 space-y-3.5 text-xs sm:text-sm">
+      <div class="flex items-center justify-between border-b border-zinc-100 pb-2">
+        <h3 class="font-bold text-zinc-900">Ubah PIN Bendahara</h3>
+        <button type="button" id="btnCloseChangePinModal" class="text-zinc-400 hover:text-zinc-600 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="formChangePin" class="space-y-3">
+        <div>
+          <label class="block font-semibold text-zinc-700 mb-1">PIN Lama</label>
+          <input type="password" id="inputOldPin" required maxlength="8" class="w-full px-3 py-2 rounded-xl border border-zinc-200 font-mono" />
+        </div>
+        <div>
+          <label class="block font-semibold text-zinc-700 mb-1">PIN Baru (Min 4 digit)</label>
+          <input type="password" id="inputNewPin" required minlength="4" maxlength="8" class="w-full px-3 py-2 rounded-xl border border-zinc-200 font-mono" />
+        </div>
+        <p id="changePinErrorMessage" class="text-xs text-rose-600 hidden font-medium"></p>
+        <div class="flex justify-end space-x-2 pt-2 border-t border-zinc-100">
+          <button type="button" id="btnCancelChangePinModal" class="px-3.5 py-2 border border-zinc-200 rounded-xl text-zinc-600 font-semibold">Batal</button>
+          <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT TRANSACTION -->
+  <div id="modalTransaction" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl border border-zinc-200 max-w-md w-full overflow-hidden p-5 space-y-3.5 text-xs sm:text-sm">
+      <div class="flex items-center justify-between border-b border-zinc-100 pb-2">
+        <h3 id="modalTxTitle" class="font-bold text-zinc-900">Catat Kas Kelas</h3>
+        <button type="button" id="btnCloseTxModal" class="text-zinc-400 hover:text-zinc-600 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="formTransaction" class="space-y-3">
+        <input type="hidden" id="txId" />
+        <div>
+          <label class="block font-semibold text-zinc-700 mb-1">Jenis Transaksi</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center justify-center p-2.5 rounded-xl border border-zinc-200 cursor-pointer hover:bg-emerald-50 has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50 has-[:checked]:text-emerald-800 font-bold">
+              <input type="radio" name="txType" value="INCOME" checked class="mr-1.5" /> + Pemasukan
+            </label>
+            <label class="flex items-center justify-center p-2.5 rounded-xl border border-zinc-200 cursor-pointer hover:bg-rose-50 has-[:checked]:border-rose-600 has-[:checked]:bg-rose-50 has-[:checked]:text-rose-800 font-bold">
+              <input type="radio" name="txType" value="EXPENSE" class="mr-1.5" /> - Pengeluaran
+            </label>
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-zinc-700 mb-1">Nominal (Rp)</label>
+          <input type="number" id="txAmount" required min="500" step="500" placeholder="25000" class="w-full px-3 py-2 rounded-xl border border-zinc-200 font-bold text-zinc-900" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-zinc-700 mb-1">Tanggal</label>
+            <input type="date" id="txDate" required class="w-full px-3 py-2 rounded-xl border border-zinc-200" />
+          </div>
+          <div>
+            <label class="block font-semibold text-zinc-700 mb-1">Kategori</label>
+            <select id="txCategory" required class="w-full px-3 py-2 rounded-xl border border-zinc-200 bg-white">
+              <option value="Iuran Kas">Iuran Kas Siswa</option>
+              <option value="Donasi / Sponsor">Donasi / Sponsor</option>
+              <option value="Alat & Kebersihan">Alat & Kebersihan</option>
+              <option value="Fotokopi & Modul">Fotokopi & Modul</option>
+              <option value="Konsumsi & Kegiatan">Konsumsi & Kegiatan</option>
+              <option value="Sosial / Menjenguk">Sosial / Menjenguk</option>
+              <option value="Lainnya">Lainnya</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-zinc-700 mb-1">Keterangan / Keperluan</label>
+          <input type="text" id="txDescription" required placeholder="Beli spidol & penghapus whiteboard" class="w-full px-3 py-2 rounded-xl border border-zinc-200" />
+        </div>
+        <div class="flex justify-end space-x-2 pt-2 border-t border-zinc-100">
+          <button type="button" id="btnCancelTxModal" class="px-3.5 py-2 border border-zinc-200 rounded-xl text-zinc-600 font-semibold">Batal</button>
+          <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-xs">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: MANAGE STUDENTS -->
+  <div id="modalStudents" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl border border-zinc-200 max-w-md w-full overflow-hidden p-5 space-y-3.5">
+      <div class="flex items-center justify-between border-b border-zinc-100 pb-2">
+        <h3 class="font-bold text-zinc-900 text-sm">Kelola Daftar Siswa Kelas</h3>
+        <button type="button" id="btnCloseStudentModal" class="text-zinc-400 hover:text-zinc-600 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="formAddStudent" class="flex space-x-2">
+        <input type="text" id="newStudentName" placeholder="Nama siswa baru..." required class="flex-1 text-xs px-3 py-2 rounded-xl border border-zinc-200" />
+        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs whitespace-nowrap">+ Tambah</button>
+      </form>
+      <p class="text-xs text-zinc-400">Total: <span id="modalStudentCount" class="font-bold text-zinc-700">0</span> siswa</p>
+      <div class="max-h-56 overflow-y-auto border border-zinc-200 rounded-xl divide-y divide-zinc-100" id="modalStudentList"></div>
+      <div class="flex justify-end pt-1">
+        <button type="button" id="btnDoneStudentModal" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-900 text-white rounded-xl text-xs font-bold">Selesai</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SETTINGS -->
+  <div id="modalSettings" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl border border-zinc-200 max-w-sm w-full overflow-hidden p-5 space-y-3.5 text-xs sm:text-sm">
+      <div class="flex items-center justify-between border-b border-zinc-100 pb-2">
+        <h3 class="font-bold text-zinc-900">Pengaturan Identitas Kelas</h3>
+        <button type="button" id="btnCloseSettingsModal" class="text-zinc-400 hover:text-zinc-600 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="formClassSettings" class="space-y-3">
+        <div>
+          <label class="block font-semibold text-zinc-700 mb-1">Nama Kelas / Organisasi</label>
+          <input type="text" id="settingClassName" required class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-zinc-800" />
+        </div>
+        <div>
+          <label class="block font-semibold text-zinc-700 mb-1">Tarif Mingguan Acuan (Rp)</label>
+          <input type="number" id="settingTariff" required min="1000" step="500" class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-zinc-800" />
+        </div>
+        <div class="flex justify-end space-x-2 pt-2 border-t border-zinc-100">
+          <button type="button" id="btnCancelSettingsModal" class="px-3.5 py-2 border border-zinc-200 rounded-xl text-zinc-600 font-semibold">Batal</button>
+          <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-xs">Simpan ke Cloud</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full px-3"></div>
+
+  <!-- ==================== FIREBASE V10 + CLOUD LOGIC ==================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Provided live Firebase credentials
+    const firebaseConfig = {
+      apiKey: "AIzaSyDVmG64qdA6D26SGsq3-FoPNCnxiaOL870",
+      authDomain: "web-kas-kelas.firebaseapp.com",
+      projectId: "web-kas-kelas",
+      storageBucket: "web-kas-kelas.firebasestorage.app",
+      messagingSenderId: "847687790574",
+      appId: "1:847687790574:web:a400afa6c4e73fb3efa8ff",
+      measurementId: "G-MNLFRLC9WZ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const CLASS_DOC_REF = doc(db, "class_data", "main_record");
+
+    const PIN_STORAGE_KEY = 'KAS_KELAS_ADMIN_PIN';
+    const DEFAULT_PIN = '3324';
+
+    const defaultData = {
+      meta: {
+        className: 'Kas Kelas X TJKT 1',
+        weeklyTariff: 4000
+      },
+      students: [
+        { id: 'std_1', name: 'Atha Arkananta Shaquille' }
+      ],
+      payments: {
+        "2026-09_std_1_w1": 4000
+      },
+      transactions: [
+        {
+          id: 'tx_seed_1',
+          type: 'INCOME',
+          amount: 40000,
+          category: 'Lorem Ipsum',
+          description: 'Lorem Ipsum',
+          date: '2026-09-01'
+        }
+      ]
+    };
+
+    const state = {
+      isAdmin: false,
+      adminPin: DEFAULT_PIN,
+      data: null,
+      currentMonth: '2026-09',
+      isFirstLoaded: false,
+
+      init() {
+        this.adminPin = localStorage.getItem(PIN_STORAGE_KEY) || DEFAULT_PIN;
+        const now = new Date();
+        this.currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        this.listenToFirestore();
+      },
+
+      listenToFirestore() {
+        onSnapshot(CLASS_DOC_REF, async (snap) => {
+          if (!snap.exists()) {
+            await setDoc(CLASS_DOC_REF, defaultData);
+            this.data = JSON.parse(JSON.stringify(defaultData));
+          } else {
+            const raw = snap.data();
+            this.data = {
+              meta: raw.meta || defaultData.meta,
+              students: raw.students || defaultData.students,
+              payments: raw.payments || {},
+              transactions: raw.transactions || []
+            };
+
+            // Migrate any old boolean or object payments to pure numeric amounts
+            const tariff = this.data.meta.weeklyTariff || 5000;
+            let needsMigration = false;
+            Object.keys(this.data.payments).forEach(k => {
+              const val = this.data.payments[k];
+              if (typeof val === 'boolean') {
+                this.data.payments[k] = val ? tariff : 0;
+                needsMigration = true;
+              } else if (val && typeof val === 'object') {
+                this.data.payments[k] = val.paid ? (Number(val.amount) || tariff) : 0;
+                needsMigration = true;
+              } else if (typeof val !== 'number') {
+                this.data.payments[k] = Number(val) || 0;
+              }
+            });
+            if (needsMigration && this.isAdmin) {
+              this.saveToCloud();
+            }
+          }
+
+          if (!this.isFirstLoaded) {
+            this.isFirstLoaded = true;
+            const loader = document.getElementById('syncLoader');
+            if (loader) {
+              loader.classList.add('opacity-0');
+              setTimeout(() => loader.remove(), 300);
+            }
+          }
+          render();
+        }, (err) => {
+          console.error("Firestore onSnapshot error:", err);
+          showToast("Koneksi cloud error: " + err.message, "error");
+        });
+      },
+
+      async saveToCloud() {
+        if (!this.isAdmin && this.isFirstLoaded) return;
+        try {
+          // Trik cepat membuang properti bernilai undefined
+          const cleanData = JSON.parse(JSON.stringify(this.data));
+          await setDoc(CLASS_DOC_REF, cleanData);
+        } catch (e) {
+          console.error("Save error:", e);
+          showToast("Gagal menyimpan ke Firestore: " + e.message, "error");
+        }
+      },
+
+      setAdmin(val) {
+        this.isAdmin = !!val;
+        render();
+      },
+
+      changePin(pin) {
+        this.adminPin = pin;
+        localStorage.setItem(PIN_STORAGE_KEY, pin);
+        showToast('PIN Bendahara berhasil disimpan!', 'success');
+      },
+
+      getStudentPayment(studentId, weekNum) {
+        if (!this.data || !this.data.payments) return 0;
+        const key = `${this.currentMonth}_${studentId}_w${weekNum}`;
+        const val = this.data.payments[key];
+        if (typeof val === 'number') return val;
+        if (typeof val === 'boolean') return val ? (this.data.meta.weeklyTariff || 5000) : 0;
+        if (val && typeof val === 'object') return val.paid ? (Number(val.amount) || this.data.meta.weeklyTariff || 5000) : 0;
+        return 0;
+      },
+
+      async setStudentPayment(studentId, weekNum, amount) {
+        if (!this.isAdmin) {
+          showToast('Mode terkunci! Masuk sebagai bendahara untuk mengubah.', 'error');
+          openModal('modalLogin');
+          return;
+        }
+        const numericAmount = Math.max(0, Number(amount) || 0);
+        const key = `${this.currentMonth}_${studentId}_w${weekNum}`;
+        const student = this.data.students.find(s => s.id === studentId);
+        const stdName = student ? student.name : 'Siswa';
+
+        if (numericAmount === 0) {
+          delete this.data.payments[key];
+        } else {
+          this.data.payments[key] = numericAmount;
+        }
+
+        // Auto Ledger Sync
+        const txRef = `iuran_${key}`;
+        const existingTxIdx = this.data.transactions.findIndex(t => t.studentPaymentRef === key || t.id === txRef);
+
+        if (numericAmount > 0) {
+          const paymentDate = `${this.currentMonth}-0${Math.min(weekNum * 7, 28)}`;
+          const txObj = {
+            id: txRef,
+            type: 'INCOME',
+            amount: numericAmount,
+            category: 'Iuran Kas',
+            description: `Iuran Mingguan (M${weekNum}) - ${stdName}`,
+            date: paymentDate,
+            studentPaymentRef: key
+          };
+          if (existingTxIdx >= 0) {
+            this.data.transactions[existingTxIdx] = txObj;
+          } else {
+            this.data.transactions.unshift(txObj);
+          }
+        } else if (existingTxIdx >= 0) {
+          this.data.transactions.splice(existingTxIdx, 1);
+        }
+
+        await this.saveToCloud();
+        showToast(`Iuran ${stdName} (M${weekNum}) disimpan: ${formatRupiah(numericAmount)}.`, 'success');
+      },
+
+      async updateClassMeta(name, tariff) {
+        if (!this.isAdmin) return;
+        this.data.meta.className = name;
+        this.data.meta.weeklyTariff = Number(tariff);
+        await this.saveToCloud();
+        showToast('Identitas kelas tersimpan ke cloud!', 'success');
+      },
+
+      async addStudent(name) {
+        if (!this.isAdmin) return;
+        const clean = name.trim();
+        if (!clean) return;
+        this.data.students.push({
+          id: 'std_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          name: clean
+        });
+        await this.saveToCloud();
+        showToast(`Siswa "${clean}" berhasil ditambahkan.`, 'success');
+      },
+
+      async removeStudent(id) {
+        if (!this.isAdmin) return;
+        this.data.students = this.data.students.filter(s => s.id !== id);
+        await this.saveToCloud();
+        showToast('Siswa berhasil dihapus.', 'info');
+      },
+
+      async saveTransaction(tx) {
+        if (!this.isAdmin) return;
+        if (tx.id) {
+          const idx = this.data.transactions.findIndex(t => t.id === tx.id);
+          if (idx !== -1) this.data.transactions[idx] = { ...this.data.transactions[idx], ...tx };
+        } else {
+          this.data.transactions.unshift({
+            id: 'tx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            ...tx
+          });
+        }
+        await this.saveToCloud();
+        showToast('Transaksi disimpan ke cloud.', 'success');
+      },
+
+      async deleteTransaction(txId) {
+        if (!this.isAdmin) return;
+        const tx = this.data.transactions.find(t => String(t.id) === String(txId));
+        if (!tx) return;
+        if (confirm(`Hapus transaksi "${tx.description}" (${formatRupiah(tx.amount)})?`)) {
+          if (tx.studentPaymentRef && this.data.payments[tx.studentPaymentRef]) {
+            delete this.data.payments[tx.studentPaymentRef];
+          }
+          this.data.transactions = this.data.transactions.filter(t => t.id !== txId);
+          await this.saveToCloud();
+          showToast('Transaksi dihapus.', 'info');
+          console.log('deleteTransaction called with');
+        }
+      },
+
+      async resetData() {
+        if (!this.isAdmin) return;
+        this.data = JSON.parse(JSON.stringify(defaultData));
+        await this.saveToCloud();
+        showToast('Data kas telah di-reset ke setelan awal.', 'warning');
+      }
+    };
+
+    // UTILITIES
+    function formatRupiah(num) {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num || 0);
+    }
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const bg = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : type === 'warning' ? 'bg-amber-600' : 'bg-zinc-800';
+      toast.className = `${bg} text-white px-3.5 py-2.5 rounded-xl shadow-lg text-xs font-semibold flex items-center space-x-2 transition-all duration-300 opacity-0 transform translate-y-2 pointer-events-auto border border-white/10`;
+      toast.textContent = msg;
+      container.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('opacity-0', 'translate-y-2');
+      });
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    // EXPORT / IMPORT CSV
+    function escapeCsv(str) {
+      const s = String(str ?? '').replace(/"/g, '""');
+      return `"${s}"`;
+    }
+
+    function downloadCsv(content, filename) {
+      const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function exportTransactionsCsv() {
+      if (!state.data) return;
+      const rows = [['ID Transaksi', 'Tanggal', 'Jenis', 'Kategori', 'Keterangan', 'Nominal (IDR)'].map(escapeCsv).join(',')];
+      state.data.transactions.forEach(t => {
+        rows.push([t.id, t.date, t.type === 'INCOME' ? 'Pemasukan' : 'Pengeluaran', t.category, t.description, t.amount].map(escapeCsv).join(','));
+      });
+      downloadCsv(rows.join('\r\n'), `Buku_Kas_${state.currentMonth}.csv`);
+      showToast('Buku kas diunduh (CSV).', 'success');
+    }
+
+    function exportStudentsWeeklyCsv() {
+      if (!state.data) return;
+      const tariff = state.data.meta.weeklyTariff || 5000;
+      const rows = [['No', 'Nama Siswa', 'Minggu 1 (IDR)', 'Minggu 2 (IDR)', 'Minggu 3 (IDR)', 'Minggu 4 (IDR)', 'Total Bayar (IDR)', 'Status'].map(escapeCsv).join(',')];
+      state.data.students.forEach((s, idx) => {
+        const w1 = state.getStudentPayment(s.id, 1);
+        const w2 = state.getStudentPayment(s.id, 2);
+        const w3 = state.getStudentPayment(s.id, 3);
+        const w4 = state.getStudentPayment(s.id, 4);
+        const total = w1 + w2 + w3 + w4;
+        const status = total >= tariff * 4 ? 'Lunas Penuh (100%)' : total > 0 ? 'Sebagian' : 'Belum Bayar';
+        rows.push([idx + 1, s.name, w1, w2, w3, w4, total, status].map(escapeCsv).join(','));
+      });
+      downloadCsv(rows.join('\r\n'), `Rekap_Iuran_${state.currentMonth}.csv`);
+      showToast('Rekap iuran diunduh (CSV).', 'success');
+    }
+
+    async function importCsv(file) {
+      if (!state.isAdmin) return;
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+      if (lines.length < 2) return showToast('Berkas CSV kosong.', 'error');
+
+      let imported = 0;
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(',').map(s => s.replace(/^"|"$/g, '').trim());
+        if (parts.length < 3) continue;
+        const desc = parts[4] || parts[3] || parts[0];
+        const amt = Math.abs(parseFloat(parts[5] || parts[4] || parts[1])) || 0;
+        if (!amt) continue;
+        const type = (parts[2] || '').toUpperCase().includes('KELUAR') ? 'EXPENSE' : 'INCOME';
+        const date = parts[1] || new Date().toISOString().split('T')[0];
+        const cat = parts[3] || (type === 'INCOME' ? 'Iuran Kas' : 'Lainnya');
+
+        state.data.transactions.unshift({
+          id: 'tx_csv_' + Date.now() + '_' + i,
+          type,
+          amount: amt,
+          category: cat,
+          description: desc,
+          date
+        });
+        imported++;
+      }
+      await state.saveToCloud();
+      showToast(`Berhasil mengimpor ${imported} transaksi!`, 'success');
+    }
+
+    // ==========================================
+    // RENDER FUNCTIONS
+    // ==========================================
+    function render() {
+      if (!state.data) return;
+      renderAuth();
+      renderStats();
+      renderTracker();
+      renderLedger();
+      renderSummary();
+    }
+
+    function renderAuth() {
+      const desktop = document.getElementById('desktopAuthSlot');
+      const mobile = document.getElementById('mobileAuthSlot');
+      const notice = document.getElementById('viewerNoticeBanner');
+      const adminEls = document.querySelectorAll('.admin-only');
+
+      if (state.isAdmin) {
+        notice.classList.add('hidden');
+        adminEls.forEach(el => el.classList.remove('hidden'));
+        const html = `
+          <div class="flex items-center space-x-1.5">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+              <span class="w-1.5 h-1.5 mr-1 rounded-full bg-emerald-600 animate-pulse"></span> Bendahara
+            </span>
+            <button id="btnLockAdmin" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs px-2.5 py-1.5 rounded-xl font-bold border border-zinc-200 transition min-h-[38px] flex items-center space-x-1" title="Kunci">
+              <span>Kunci</span>
+            </button>
+          </div>
+        `;
+        desktop.innerHTML = html;
+        mobile.innerHTML = html;
+        document.querySelectorAll('#btnLockAdmin').forEach(b => b.onclick = () => {
+          state.setAdmin(false);
+          showToast('Mode bendahara dikunci.', 'info');
+        });
+      } else {
+        notice.classList.remove('hidden');
+        adminEls.forEach(el => el.classList.add('hidden'));
+        const html = `
+          <button id="btnOpenLogin" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow-xs transition min-h-[38px] flex items-center space-x-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+            <span>Masuk PIN</span>
+          </button>
+        `;
+        desktop.innerHTML = html;
+        mobile.innerHTML = html;
+        document.querySelectorAll('#btnOpenLogin').forEach(b => b.onclick = () => {
+          document.getElementById('inputAdminPin').value = '';
+          document.getElementById('loginErrorMessage').classList.add('hidden');
+          openModal('modalLogin');
+        });
+      }
+    }
+
+    function renderStats() {
+      document.getElementById('headerClassName').textContent = state.data.meta.className;
+      document.getElementById('headerTariff').textContent = formatRupiah(state.data.meta.weeklyTariff);
+      document.getElementById('filterMonthYear').value = state.currentMonth;
+
+      let totalBalance = 0;
+      let monthIncome = 0;
+      let monthExpense = 0;
+      let monthExpenseCount = 0;
+      const curMonth = state.currentMonth;
+
+      state.data.transactions.forEach(t => {
+        const amt = Number(t.amount) || 0;
+        const isCur = t.date && t.date.startsWith(curMonth);
+        if (t.type === 'INCOME') {
+          totalBalance += amt;
+          if (isCur) monthIncome += amt;
+        } else if (t.type === 'EXPENSE') {
+          totalBalance -= amt;
+          if (isCur) {
+            monthExpense += amt;
+            monthExpenseCount++;
+          }
+        }
+      });
+
+      const totalStudents = state.data.students.length;
+      const totalSlots = totalStudents * 4;
+      let paidFullSlots = 0;
+      let partialSlots = 0;
+      const tariff = state.data.meta.weeklyTariff || 5000;
+
+      state.data.students.forEach(s => {
+        for (let w = 1; w <= 4; w++) {
+          const amt = state.getStudentPayment(s.id, w);
+          if (amt >= tariff) paidFullSlots++;
+          else if (amt > 0) partialSlots++;
+        }
+      });
+
+      const compliancePercent = totalSlots > 0 ? Math.round(((paidFullSlots + (partialSlots * 0.5)) / totalSlots) * 100) : 0;
+
+      document.getElementById('statTotalBalance').textContent = formatRupiah(totalBalance);
+      document.getElementById('statMonthIncome').textContent = formatRupiah(monthIncome);
+      document.getElementById('statMonthExpense').textContent = formatRupiah(monthExpense);
+      document.getElementById('statExpenseBreakdown').textContent = `${monthExpenseCount} transaksi bulan ini`;
+      document.getElementById('statCollectionPercent').textContent = `${compliancePercent}%`;
+      document.getElementById('statPaidRatio').textContent = `${paidFullSlots} lunas / ${totalSlots}`;
+      document.getElementById('statProgressBar').style.width = `${Math.min(compliancePercent, 100)}%`;
+      document.getElementById('trackerTotalStudentsLabel').textContent = `${totalStudents} Siswa Terdaftar`;
+    }
+
+    // Helper to generate the dynamic visual status badge for a week
+    function getWeekCellBadge(amount, tariff, studentId, weekNum) {
+      let badgeClass = '';
+      let badgeText = '';
+      let statusIcon = '';
+
+      if (amount >= tariff) {
+        badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100';
+        badgeText = formatRupiah(amount);
+        statusIcon = '<svg class="w-3 h-3 mr-1 text-emerald-600 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>';
+      } else if (amount > 0) {
+        badgeClass = 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100';
+        badgeText = formatRupiah(amount);
+        statusIcon = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 inline-block"></span>';
+      } else {
+        badgeClass = 'bg-zinc-100 text-zinc-400 border-zinc-200 hover:bg-zinc-200';
+        badgeText = 'Rp 0';
+      }
+
+      return `
+        <button 
+          type="button"
+          data-student-id="${studentId}"
+          data-week="${weekNum}"
+          data-amount="${amount}"
+          class="btn-edit-payment px-2.5 py-1.5 rounded-xl border text-xs font-bold transition flex items-center justify-center w-full min-h-[34px] ${badgeClass}"
+          title="Klik untuk ubah nominal (Tarif: ${formatRupiah(tariff)})"
+        >
+          ${statusIcon}<span>${badgeText}</span>
+        </button>
+      `;
+    }
+
+    function renderTracker() {
+      const tbody = document.getElementById('studentTableBody');
+      const mobileCards = document.getElementById('studentMobileCards');
+      const query = (document.getElementById('searchStudent').value || '').toLowerCase();
+      const tariff = state.data.meta.weeklyTariff || 5000;
+
+      const filtered = state.data.students.filter(s => s.name.toLowerCase().includes(query));
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-zinc-400">Tidak ada siswa yang cocok.</td></tr>`;
+        mobileCards.innerHTML = `<div class="p-6 text-center text-zinc-400 bg-white rounded-2xl border border-zinc-200 text-xs">Tidak ada siswa yang cocok.</div>`;
+        return;
+      }
+
+      let desktopHtml = '';
+      let mobileHtml = '';
+
+      filtered.forEach((std, idx) => {
+        let totalPaid = 0;
+        let weekCells = '';
+        let mobileWeekButtons = '';
+
+        for (let w = 1; w <= 4; w++) {
+          const amt = state.getStudentPayment(std.id, w);
+          totalPaid += amt;
+          weekCells += `<td class="py-2 px-2 text-center">${getWeekCellBadge(amt, tariff, std.id, w)}</td>`;
+          mobileWeekButtons += `
+            <div class="flex-1">
+              <span class="text-[10px] text-zinc-400 block mb-0.5 text-center">M${w}</span>
+              ${getWeekCellBadge(amt, tariff, std.id, w)}
+            </div>
+          `;
+        }
+
+        const isFullPaid = totalPaid >= tariff * 4;
+        const isPartial = totalPaid > 0 && !isFullPaid;
+        const statusBadge = isFullPaid
+          ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">Lunas</span>`
+          : isPartial
+          ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800">Sebagian</span>`
+          : `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-zinc-100 text-zinc-500">Belum</span>`;
+
+        desktopHtml += `
+          <tr class="hover:bg-zinc-50/80 transition">
+            <td class="py-3 px-4 text-center text-zinc-400 font-mono text-xs">${idx + 1}</td>
+            <td class="py-3 px-4 font-semibold text-zinc-900">${std.name}</td>
+            ${weekCells}
+            <td class="py-3 px-4 text-right font-bold font-mono text-zinc-800">${formatRupiah(totalPaid)}</td>
+            <td class="py-3 px-3 text-center">${statusBadge}</td>
+          </tr>
+        `;
+
+        mobileHtml += `
+          <div class="bg-white p-3.5 rounded-2xl border border-zinc-200 shadow-xs space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-mono text-zinc-400">${idx + 1}.</span>
+                <span class="text-sm font-bold text-zinc-900">${std.name}</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                ${statusBadge}
+                <span class="text-xs font-extrabold font-mono text-zinc-800">${formatRupiah(totalPaid)}</span>
+              </div>
+            </div>
+            <div class="flex space-x-1.5 pt-1 border-t border-zinc-100">
+              ${mobileWeekButtons}
+            </div>
+          </div>
+        `;
+      });
+
+      tbody.innerHTML = desktopHtml;
+      mobileCards.innerHTML = mobileHtml;
+
+      // Attach click events for nominal payment modal
+      document.querySelectorAll('.btn-edit-payment').forEach(btn => {
+        btn.onclick = () => {
+          const studentId = btn.dataset.studentId;
+          const weekNum = Number(btn.dataset.week);
+          const currentAmount = Number(btn.dataset.amount) || 0;
+          openNominalPaymentModal(studentId, weekNum, currentAmount);
+        };
+      });
+    }
+
+    function openNominalPaymentModal(studentId, weekNum, currentAmount) {
+      const student = state.data.students.find(s => s.id === studentId);
+      const tariff = state.data.meta.weeklyTariff || 5000;
+
+      if (!state.isAdmin) {
+        showToast(`Iuran ${student ? student.name : ''} (M${weekNum}): ${formatRupiah(currentAmount)}. Masuk bendahara untuk mengubah.`, 'info');
+        return;
+      }
+
+      document.getElementById('entryStudentId').value = studentId;
+      document.getElementById('entryWeekNum').value = weekNum;
+      document.getElementById('entryStudentName').textContent = student ? student.name : 'Siswa';
+      document.getElementById('entryWeekInfo').textContent = `Minggu ke-${weekNum} (${state.currentMonth})`;
+      document.getElementById('entryTariffRef').textContent = formatRupiah(tariff);
+      document.getElementById('inputCustomAmount').value = currentAmount || tariff;
+
+      // Presets
+      document.getElementById('btnPresetFull').onclick = () => {
+        document.getElementById('inputCustomAmount').value = tariff;
+      };
+      document.getElementById('btnPresetHalf').onclick = () => {
+        document.getElementById('inputCustomAmount').value = Math.round(tariff / 2);
+      };
+      document.getElementById('btnPresetClear').onclick = () => {
+        document.getElementById('inputCustomAmount').value = 0;
+      };
+
+      openModal('modalPaymentEntry');
+    }
+
+    function renderLedger() {
+      const tbody = document.getElementById('txTableBody');
+      const mobileCards = document.getElementById('txMobileCards');
+      const query = (document.getElementById('searchTx').value || '').toLowerCase();
+      const filterType = document.getElementById('filterTxType').value;
+      const filterCat = document.getElementById('filterTxCategory').value;
+
+      const filtered = state.data.transactions.filter(t => {
+        if (query && !t.description.toLowerCase().includes(query) && !t.category.toLowerCase().includes(query)) return false;
+        if (filterType !== 'ALL' && t.type !== filterType) return false;
+        if (filterCat !== 'ALL' && t.category !== filterCat) return false;
+        return true;
+      });
+
+      document.getElementById('ledgerCountDisplay').textContent = filtered.length;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-zinc-400">Tidak ada transaksi tercatat.</td></tr>`;
+        mobileCards.innerHTML = `<div class="p-6 text-center text-zinc-400 bg-white rounded-2xl border border-zinc-200 text-xs">Tidak ada transaksi.</div>`;
+        return;
+      }
+
+      let dHtml = '';
+      let mHtml = '';
+
+      filtered.forEach(t => {
+        const isInc = t.type === 'INCOME';
+        const typeBadge = isInc
+          ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">+ Masuk</span>`
+          : `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800">- Keluar</span>`;
+        const amtClass = isInc ? 'text-emerald-600 font-extrabold' : 'text-rose-600 font-extrabold';
+
+        dHtml += `
+          <tr class="hover:bg-zinc-50 transition">
+            <td class="py-3 px-4 font-mono text-zinc-500">${t.date || '-'}</td>
+            <td class="py-3 px-3">${typeBadge}</td>
+            <td class="py-3 px-3 font-semibold text-zinc-700">${t.category}</td>
+            <td class="py-3 px-4 text-zinc-800">${t.description}</td>
+            <td class="py-3 px-4 text-right font-mono ${amtClass}">${formatRupiah(t.amount)}</td>
+            <td class="py-3 px-4 text-center admin-only ${state.isAdmin ? '' : 'hidden'}">
+              <button class="btn-delete-tx text-zinc-400 hover:text-rose-600 p-1" data-id="${t.id}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </td>
+          </tr>
+        `;
+
+        mHtml += `
+          <div class="bg-white p-3.5 rounded-2xl border border-zinc-200 shadow-xs space-y-1.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-1.5">
+                ${typeBadge}
+                <span class="text-xs font-semibold text-zinc-600">${t.category}</span>
+              </div>
+              <span class="font-mono text-xs ${amtClass}">${formatRupiah(t.amount)}</span>
+            </div>
+            <div class="text-xs text-zinc-800 font-medium">${t.description}</div>
+            <div class="flex items-center justify-between text-[11px] text-zinc-400 pt-1 border-t border-zinc-100">
+              <span class="font-mono">${t.date || '-'}</span>
+              <button class="btn-delete-tx text-rose-500 hover:text-rose-700 font-bold admin-only ${state.isAdmin ? '' : 'hidden'}" data-id="${t.id}">Hapus</button>
+            </div>
+          </div>
+        `;
+      });
+
+      tbody.innerHTML = dHtml;
+      mobileCards.innerHTML = mHtml;
+
+      document.querySelectorAll('.btn-delete-tx').forEach(b => {
+        b.onclick = () => state.deleteTransaction(b.dataset.id);
+      });
+    }
+
+    function renderSummary() {
+      const curMonth = state.currentMonth;
+      const [yearStr, monthStr] = curMonth.split('-');
+      const y = parseInt(yearStr);
+      const m = parseInt(monthStr);
+      const prevDate = new Date(y, m - 2, 1);
+      const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
+      let curInc = 0, curExp = 0;
+      let prevInc = 0, prevExp = 0;
+      const catMap = {};
+
+      state.data.transactions.forEach(t => {
+        const amt = Number(t.amount) || 0;
+        if (t.date && t.date.startsWith(curMonth)) {
+          if (t.type === 'INCOME') curInc += amt;
+          else {
+            curExp += amt;
+            catMap[t.category] = (catMap[t.category] || 0) + amt;
+          }
+        } else if (t.date && t.date.startsWith(prevMonth)) {
+          if (t.type === 'INCOME') prevInc += amt;
+          else prevExp += amt;
+        }
+      });
+
+      const curNet = curInc - curExp;
+      const prevNet = prevInc - prevExp;
+
+      document.getElementById('reportMonthLabel').textContent = curMonth;
+      document.getElementById('compCurLabel').textContent = curMonth;
+      document.getElementById('compCurIncome').textContent = formatRupiah(curInc);
+      document.getElementById('compCurExpense').textContent = formatRupiah(curExp);
+      document.getElementById('compCurNet').textContent = formatRupiah(curNet);
+
+      document.getElementById('compPrevLabel').textContent = prevMonth;
+      document.getElementById('compPrevIncome').textContent = formatRupiah(prevInc);
+      document.getElementById('compPrevExpense').textContent = formatRupiah(prevExp);
+      document.getElementById('compPrevNet').textContent = formatRupiah(prevNet);
+
+      const netDiff = prevNet !== 0 ? Math.round(((curNet - prevNet) / Math.abs(prevNet)) * 100) : 0;
+      document.getElementById('compNetDiff').textContent = `${netDiff >= 0 ? '+' : ''}${netDiff}%`;
+
+      // Category breakdown
+      const container = document.getElementById('categoryBreakdownContainer');
+      const entries = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+      if (entries.length === 0) {
+        container.innerHTML = `<p class="text-xs text-zinc-400 py-3 text-center">Belum ada pengeluaran pada bulan ini.</p>`;
+      } else {
+        let h = '';
+        entries.forEach(([cat, val]) => {
+          const pct = curExp > 0 ? Math.round((val / curExp) * 100) : 0;
+          h += `
+            <div>
+              <div class="flex justify-between text-xs font-semibold mb-1">
+                <span class="text-zinc-700">${cat}</span>
+                <span class="font-mono text-zinc-900">${formatRupiah(val)} (${pct}%)</span>
+              </div>
+              <div class="w-full bg-zinc-100 rounded-full h-1.5 overflow-hidden">
+                <div class="bg-rose-500 h-1.5 rounded-full" style="width: ${pct}%"></div>
+              </div>
+            </div>
+          `;
+        });
+        container.innerHTML = h;
+      }
+    }
+
+    function renderModalStudents() {
+      const list = document.getElementById('modalStudentList');
+      document.getElementById('modalStudentCount').textContent = state.data.students.length;
+      let h = '';
+      state.data.students.forEach((s, idx) => {
+        h += `
+          <div class="flex items-center justify-between p-2.5 hover:bg-zinc-50 text-xs">
+            <span class="font-semibold text-zinc-800">${idx + 1}. ${s.name}</span>
+            <button class="btn-remove-student text-zinc-400 hover:text-rose-600 p-1" data-id="${s.id}">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        `;
+      });
+      list.innerHTML = h;
+      document.querySelectorAll('.btn-remove-student').forEach(b => {
+        b.onclick = () => {
+          state.removeStudent(b.dataset.id);
+          renderModalStudents();
+        };
+      });
+    }
+
+    // ==========================================
+    // EVENT LISTENERS SETUP
+    // ==========================================
+    window.addEventListener('DOMContentLoaded', () => {
+      state.init();
+
+      // Tab navigation
+      const tabs = [
+        { btn: 'tabTracker', view: 'viewTracker' },
+        { btn: 'tabLedger', view: 'viewLedger' },
+        { btn: 'tabSummary', view: 'viewSummary' }
+      ];
+      tabs.forEach(t => {
+        document.getElementById(t.btn).onclick = () => {
+          tabs.forEach(o => {
+            document.getElementById(o.btn).classList.remove('tab-active');
+            document.getElementById(o.view).classList.add('hidden');
+          });
+          document.getElementById(t.btn).classList.add('tab-active');
+          document.getElementById(t.view).classList.remove('hidden');
+        };
+      });
+
+      // Filter Month
+      document.getElementById('filterMonthYear').onchange = (e) => {
+        state.currentMonth = e.target.value;
+        render();
+      };
+
+      // Search inputs
+      document.getElementById('searchStudent').oninput = () => renderTracker();
+      document.getElementById('searchTx').oninput = () => renderLedger();
+      document.getElementById('filterTxType').onchange = () => renderLedger();
+      document.getElementById('filterTxCategory').onchange = () => renderLedger();
+
+      // Dropdown menu
+      const btnMenu = document.getElementById('btnSpreadsheetMenu');
+      const menu = document.getElementById('spreadsheetMenuDropdown');
+      btnMenu.onclick = (e) => {
+        e.stopPropagation();
+        menu.classList.toggle('hidden');
+      };
+      document.addEventListener('click', () => menu.classList.add('hidden'));
+
+      // CSV buttons
+      document.getElementById('btnExportTxCsv').onclick = () => exportTransactionsCsv();
+      document.getElementById('btnExportStudentsCsv').onclick = () => exportStudentsWeeklyCsv();
+      document.getElementById('fileImportCsv').onchange = (e) => {
+        if (e.target.files[0]) importCsv(e.target.files[0]);
+      };
+
+      // Reset
+      document.getElementById('btnResetData').onclick = () => {
+        if (confirm('Yakin ingin mereset seluruh data kas ke bawaan?')) state.resetData();
+      };
+
+      // Login Modal
+      document.getElementById('bannerLoginLink').onclick = () => {
+        document.getElementById('inputAdminPin').value = '';
+        document.getElementById('loginErrorMessage').classList.add('hidden');
+        openModal('modalLogin');
+      };
+      document.getElementById('btnCloseLoginModal').onclick = () => closeModal('modalLogin');
+      document.getElementById('btnCancelLoginModal').onclick = () => closeModal('modalLogin');
+      document.getElementById('formLoginPin').onsubmit = (e) => {
+        e.preventDefault();
+        const pin = document.getElementById('inputAdminPin').value;
+        if (pin === state.adminPin) {
+          state.setAdmin(true);
+          closeModal('modalLogin');
+          showToast('Selamat datang, Bendahara!', 'success');
+        } else {
+          document.getElementById('loginErrorMessage').classList.remove('hidden');
+        }
+      };
+
+      // Change PIN Modal
+      document.getElementById('btnOpenChangePinModal').onclick = () => {
+        document.getElementById('inputOldPin').value = '';
+        document.getElementById('inputNewPin').value = '';
+        document.getElementById('changePinErrorMessage').classList.add('hidden');
+        openModal('modalChangePin');
+      };
+      document.getElementById('btnCloseChangePinModal').onclick = () => closeModal('modalChangePin');
+      document.getElementById('btnCancelChangePinModal').onclick = () => closeModal('modalChangePin');
+      document.getElementById('formChangePin').onsubmit = (e) => {
+        e.preventDefault();
+        const oldP = document.getElementById('inputOldPin').value;
+        const newP = document.getElementById('inputNewPin').value;
+        if (oldP !== state.adminPin) {
+          const err = document.getElementById('changePinErrorMessage');
+          err.textContent = 'PIN lama salah!';
+          err.classList.remove('hidden');
+          return;
+        }
+        state.changePin(newP);
+        closeModal('modalChangePin');
+      };
+
+      // Nominal Payment Modal
+      document.getElementById('btnClosePaymentModal').onclick = () => closeModal('modalPaymentEntry');
+      document.getElementById('btnCancelPaymentModal').onclick = () => closeModal('modalPaymentEntry');
+      document.getElementById('formNominalPayment').onsubmit = async (e) => {
+        e.preventDefault();
+        const stdId = document.getElementById('entryStudentId').value;
+        const week = Number(document.getElementById('entryWeekNum').value);
+        const amount = Number(document.getElementById('inputCustomAmount').value) || 0;
+        await state.setStudentPayment(stdId, week, amount);
+        closeModal('modalPaymentEntry');
+      };
+
+      // Transaction Modal
+      document.getElementById('btnOpenTxModal').onclick = () => {
+        document.getElementById('txId').value = '';
+        document.getElementById('txAmount').value = '';
+        document.getElementById('txDescription').value = '';
+        document.getElementById('txDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('modalTxTitle').textContent = 'Catat Transaksi Kas';
+        openModal('modalTransaction');
+      };
+      document.getElementById('btnCloseTxModal').onclick = () => closeModal('modalTransaction');
+      document.getElementById('btnCancelTxModal').onclick = () => closeModal('modalTransaction');
+      document.getElementById('formTransaction').onsubmit = async (e) => {
+        e.preventDefault();
+        const tx = {
+          id: document.getElementById('txId').value || undefined,
+          type: document.querySelector('input[name="txType"]:checked').value,
+          amount: Number(document.getElementById('txAmount').value) || 0,
+          date: document.getElementById('txDate').value,
+          category: document.getElementById('txCategory').value,
+          description: document.getElementById('txDescription').value
+        };
+        await state.saveTransaction(tx);
+        closeModal('modalTransaction');
+      };
+
+      // Students Management Modal
+      document.getElementById('btnOpenStudentModal').onclick = () => {
+        renderModalStudents();
+        openModal('modalStudents');
+      };
+      document.getElementById('btnCloseStudentModal').onclick = () => closeModal('modalStudents');
+      document.getElementById('btnDoneStudentModal').onclick = () => closeModal('modalStudents');
+      document.getElementById('formAddStudent').onsubmit = async (e) => {
+        e.preventDefault();
+        const input = document.getElementById('newStudentName');
+        await state.addStudent(input.value);
+        input.value = '';
+        renderModalStudents();
+      };
+
+      // Settings Modal
+      document.getElementById('btnEditClassMeta').onclick = () => {
+        document.getElementById('settingClassName').value = state.data.meta.className;
+        document.getElementById('settingTariff').value = state.data.meta.weeklyTariff;
+        openModal('modalSettings');
+      };
+      document.getElementById('btnCloseSettingsModal').onclick = () => closeModal('modalSettings');
+      document.getElementById('btnCancelSettingsModal').onclick = () => closeModal('modalSettings');
+      document.getElementById('formClassSettings').onsubmit = async (e) => {
+        e.preventDefault();
+        await state.updateClassMeta(
+          document.getElementById('settingClassName').value,
+          document.getElementById('settingTariff').value
+        );
+        closeModal('modalSettings');
+      };
+    });
+  </script>
+</body>
+</html>
