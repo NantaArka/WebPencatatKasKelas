@@ -28,77 +28,88 @@
 
   <!-- STICKY TOPBAR -->
   <header class="bg-white border-b border-zinc-200 sticky top-0 z-30 shadow-xs">
-    <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-sm shadow-xs shrink-0">Rp</div>
-          <div>
-            <div class="flex items-center space-x-1.5">
-              <h1 class="text-base font-bold text-zinc-900 leading-tight" id="headerClassName">Kas Kelas</h1>
-              <button id="btnEditClassMeta" class="admin-only hidden text-zinc-400 hover:text-emerald-700 p-1 rounded" title="Ubah Nama & Tarif Kelas">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-2.5 space-y-2 sm:space-y-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-2.5">
+      
+      <!-- Top Row Mobile: Logo, Nama Kelas & Auth Slot -->
+      <div class="flex items-center justify-between gap-2 min-w-0">
+        <div class="flex items-center space-x-2.5 min-w-0">
+          <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-xs sm:text-sm shadow-xs shrink-0">Rp</div>
+          <div class="min-w-0">
+            <div class="flex items-center space-x-1">
+              <h1 class="text-xs sm:text-base font-bold text-zinc-900 leading-tight truncate" id="headerClassName">Kas Kelas</h1>
+              <button id="btnEditClassMeta" class="admin-only hidden text-zinc-400 hover:text-emerald-700 p-0.5 rounded shrink-0" title="Ubah Nama & Tarif Kelas">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
               </button>
             </div>
-            <div class="flex items-center space-x-2 text-xs text-zinc-500">
+            <div class="flex items-center space-x-1.5 text-[10px] sm:text-xs text-zinc-500 whitespace-nowrap overflow-hidden">
               <span>Tarif: <b id="headerTariff" class="text-zinc-800 font-semibold">Rp 5.000</b>/mgu</span>
               <span class="text-zinc-300">•</span>
-              <span class="inline-flex items-center text-[11px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1"></span> Live Cloud
+              <span class="inline-flex items-center text-[10px] text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1"></span> Live
               </span>
             </div>
           </div>
         </div>
-        <div class="sm:hidden" id="mobileAuthSlot"></div>
+        
+        <!-- Auth Slot di Mobile -->
+        <div class="sm:hidden shrink-0" id="mobileAuthSlot"></div>
       </div>
 
-      <!-- Actions Bar -->
-      <div class="flex items-center justify-between sm:justify-end flex-wrap gap-2">
-        <div class="flex items-center space-x-1.5 bg-zinc-100 px-2.5 py-1.5 rounded-xl border border-zinc-200">
-          <svg class="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          <input type="month" id="filterMonthYear" class="bg-transparent text-xs font-semibold text-zinc-800 focus:outline-none cursor-pointer" />
+      <!-- Actions Bar Mobile & Desktop -->
+      <div class="grid grid-cols-12 sm:flex sm:items-center sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto">
+        
+        <!-- Filter Bulan -->
+        <div class="col-span-5 sm:col-span-auto flex items-center space-x-1 bg-zinc-100 px-2 py-1.5 rounded-xl border border-zinc-200 justify-center">
+          <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <input type="month" id="filterMonthYear" class="bg-transparent text-[11px] sm:text-xs font-semibold text-zinc-800 focus:outline-none cursor-pointer w-full sm:w-auto" />
         </div>
 
-        <button id="btnOpenTxModal" class="admin-only hidden inline-flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-xl shadow-xs transition min-h-[38px]">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-          <span>Catat Kas</span>
+        <!-- Tombol Catat Kas -->
+        <button id="btnOpenTxModal" class="admin-only hidden col-span-4 sm:col-span-auto inline-flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] sm:text-xs font-semibold px-2.5 py-1.5 sm:py-2 rounded-xl shadow-xs transition min-h-[34px] sm:min-h-[38px]">
+          <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="truncate">Catat Kas</span>
         </button>
 
-        <!-- Dropdown Menu -->
-        <div class="relative">
-          <button id="btnSpreadsheetMenu" class="inline-flex items-center space-x-1.5 bg-white hover:bg-zinc-100 text-zinc-700 text-xs font-semibold px-3 py-2 rounded-xl border border-zinc-200 transition min-h-[38px]">
-            <svg class="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <!-- Dropdown Menu Wrapper -->
+        <div class="relative col-span-3 sm:col-span-auto">
+          <button id="btnSpreadsheetMenu" class="w-full sm:w-auto inline-flex items-center justify-center space-x-1 bg-white hover:bg-zinc-100 text-zinc-700 text-[11px] sm:text-xs font-semibold px-2.5 py-1.5 sm:py-2 rounded-xl border border-zinc-200 transition min-h-[34px] sm:min-h-[38px]">
+            <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             <span class="hidden sm:inline">Data / CSV</span>
-            <svg class="w-3 h-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            <svg class="w-3 h-3 text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </button>
-          <div id="spreadsheetMenuDropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-zinc-200 py-2 z-50 text-xs">
+
+          <!-- Dropdown List (Aman dari Overflow) -->
+          <div id="spreadsheetMenuDropdown" class="hidden absolute right-0 mt-1.5 w-52 sm:w-56 bg-white rounded-2xl shadow-xl border border-zinc-200 py-2 z-50 text-xs max-w-[calc(100vw-1.5rem)]">
             <div class="px-3 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Ekspor Excel / Sheets</div>
             <button id="btnExportTxCsv" class="w-full text-left px-3.5 py-2 hover:bg-zinc-50 flex items-center space-x-2 text-zinc-700">
-              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
               <span>Unduh Buku Kas (CSV)</span>
             </button>
             <button id="btnExportStudentsCsv" class="w-full text-left px-3.5 py-2 hover:bg-zinc-50 flex items-center space-x-2 text-zinc-700">
-              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
               <span>Unduh Rekap Iuran (CSV)</span>
             </button>
             <div class="admin-only hidden border-t border-zinc-100 my-1"></div>
             <label class="admin-only hidden w-full text-left px-3.5 py-2 hover:bg-zinc-50 flex items-center space-x-2 text-zinc-700 cursor-pointer">
-              <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              <svg class="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
               <span>Impor Transaksi CSV</span>
               <input type="file" id="fileImportCsv" accept=".csv,text/csv" class="hidden" />
             </label>
-            <button id="btnOpenChangePinModal" class="admin-only hidden w-full text-left px-3.5 py-2 hover:bg-zinc-50 flex items-center space-x-2 text-zinc-700">
-              <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+            <button id="btnOpenChangePinModal" class="hidden w-full text-left px-3.5 py-2 hover:bg-zinc-50 flex items-center space-x-2 text-zinc-700">
+              <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
               <span>Ganti PIN Bendahara</span>
             </button>
             <button id="btnResetData" class="admin-only hidden w-full text-left px-3.5 py-2 hover:bg-rose-50 flex items-center space-x-2 text-rose-600 border-t border-zinc-100 mt-1">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               <span>Reset Data ke Bawaan</span>
             </button>
           </div>
         </div>
 
-        <div class="hidden sm:block" id="desktopAuthSlot"></div>
       </div>
+
+      <!-- Auth Slot di Desktop -->
+      <div class="hidden sm:block" id="desktopAuthSlot"></div>
     </div>
   </header>
 
@@ -203,15 +214,8 @@
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs sm:text-sm">
             <thead class="bg-zinc-50 border-b border-zinc-200 text-zinc-600 font-semibold uppercase text-[11px] tracking-wider">
-              <tr>
-                <th class="py-3 px-4 w-12 text-center">No</th>
-                <th class="py-3 px-4 min-w-[180px]">Nama Siswa</th>
-                <th class="py-3 px-3 text-center w-28">Minggu 1</th>
-                <th class="py-3 px-3 text-center w-28">Minggu 2</th>
-                <th class="py-3 px-3 text-center w-28">Minggu 3</th>
-                <th class="py-3 px-3 text-center w-28">Minggu 4</th>
-                <th class="py-3 px-4 text-right w-32">Total Bayar</th>
-                <th class="py-3 px-3 text-center w-28">Status</th>
+              <tr id="trackerTableHeader">
+                <!-- Rendered via JS -->
               </tr>
             </thead>
             <tbody id="studentTableBody" class="divide-y divide-zinc-100 text-zinc-700">
@@ -378,7 +382,7 @@
     </div>
   </div>
 
-  <!-- MODAL: PIN LOGIN -->
+  <!-- MODAL: FIREBASE LOGIN -->
   <div id="modalLogin" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
     <div class="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl border border-zinc-200 max-w-sm w-full overflow-hidden p-5 space-y-4">
       <div class="flex items-center justify-between border-b border-zinc-100 pb-2">
@@ -387,43 +391,22 @@
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
-      <form id="formLoginPin" class="space-y-3.5">
-        <p class="text-xs text-zinc-500">Masukkan 4-digit PIN bendahara untuk membuka akses pengisian kas & iuran.</p>
-        <div>
-          <input type="password" id="inputAdminPin" maxlength="8" placeholder="••••" required class="w-full text-center text-2xl font-mono tracking-widest px-3 py-2.5 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900" />
-          <p id="loginErrorMessage" class="text-xs text-rose-600 mt-1 hidden font-medium">PIN yang Anda masukkan salah.</p>
-          <p class="text-[11px] text-zinc-400 mt-1">PIN bawaan default: <code class="bg-zinc-100 px-1 py-0.5 rounded text-zinc-700 font-mono font-bold">1234</code></p>
+      <form id="formLoginAuth" class="space-y-3.5">
+        <p class="text-xs text-zinc-500">Masukkan Email dan Password akun bendahara.</p>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-zinc-700 mb-1">Email</label>
+            <input type="email" id="inputAdminEmail" placeholder="bendahara@kelas.com" required class="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-zinc-700 mb-1">Password</label>
+            <input type="password" id="inputAdminPassword" placeholder="••••••••" required class="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-zinc-900 text-sm" />
+          </div>
+          <p id="loginErrorMessage" class="text-xs text-rose-600 mt-1 hidden font-medium">Email atau Password salah.</p>
         </div>
         <div class="flex items-center justify-end space-x-2 pt-2">
           <button type="button" id="btnCancelLoginModal" class="px-3.5 py-2 rounded-xl border border-zinc-200 text-zinc-600 text-xs font-semibold hover:bg-zinc-50">Batal</button>
-          <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs">Buka Akses</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: CHANGE PIN -->
-  <div id="modalChangePin" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl border border-zinc-200 max-w-sm w-full overflow-hidden p-5 space-y-3.5 text-xs sm:text-sm">
-      <div class="flex items-center justify-between border-b border-zinc-100 pb-2">
-        <h3 class="font-bold text-zinc-900">Ubah PIN Bendahara</h3>
-        <button type="button" id="btnCloseChangePinModal" class="text-zinc-400 hover:text-zinc-600 p-1">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-      </div>
-      <form id="formChangePin" class="space-y-3">
-        <div>
-          <label class="block font-semibold text-zinc-700 mb-1">PIN Lama</label>
-          <input type="password" id="inputOldPin" required maxlength="8" class="w-full px-3 py-2 rounded-xl border border-zinc-200 font-mono" />
-        </div>
-        <div>
-          <label class="block font-semibold text-zinc-700 mb-1">PIN Baru (Min 4 digit)</label>
-          <input type="password" id="inputNewPin" required minlength="4" maxlength="8" class="w-full px-3 py-2 rounded-xl border border-zinc-200 font-mono" />
-        </div>
-        <p id="changePinErrorMessage" class="text-xs text-rose-600 hidden font-medium"></p>
-        <div class="flex justify-end space-x-2 pt-2 border-t border-zinc-100">
-          <button type="button" id="btnCancelChangePinModal" class="px-3.5 py-2 border border-zinc-200 rounded-xl text-zinc-600 font-semibold">Batal</button>
-          <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold">Simpan</button>
+          <button type="submit" id="btnSubmitLogin" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs">Buka Akses</button>
         </div>
       </form>
     </div>
@@ -538,6 +521,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     // Provided live Firebase credentials
     const firebaseConfig = {
@@ -552,10 +536,8 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
     const CLASS_DOC_REF = doc(db, "class_data", "main_record");
-
-    const PIN_STORAGE_KEY = 'KAS_KELAS_ADMIN_PIN';
-    const DEFAULT_PIN = '3324';
 
     const defaultData = {
       meta: {
@@ -582,15 +564,23 @@
 
     const state = {
       isAdmin: false,
-      adminPin: DEFAULT_PIN,
       data: null,
-      currentMonth: '2026-09',
+      currentMonth: '2026-10',
       isFirstLoaded: false,
 
       init() {
-        this.adminPin = localStorage.getItem(PIN_STORAGE_KEY) || DEFAULT_PIN;
         const now = new Date();
         this.currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        // Listener otomatis dari Firebase Auth
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            this.setAdmin(true);
+          } else {
+            this.setAdmin(false);
+          }
+        });
+
         this.listenToFirestore();
       },
 
@@ -605,7 +595,11 @@
               meta: raw.meta || defaultData.meta,
               students: raw.students || defaultData.students,
               payments: raw.payments || {},
-              transactions: raw.transactions || []
+              // Memberikan ID otomatis jika ada transaksi lama yang belum ber-ID
+              transactions: (raw.transactions || []).map(t => ({
+                ...t,
+                id: t.id || ('tx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4))
+              }))
             };
 
             // Migrate any old boolean or object payments to pure numeric amounts
@@ -658,12 +652,6 @@
       setAdmin(val) {
         this.isAdmin = !!val;
         render();
-      },
-
-      changePin(pin) {
-        this.adminPin = pin;
-        localStorage.setItem(PIN_STORAGE_KEY, pin);
-        showToast('PIN Bendahara berhasil disimpan!', 'success');
       },
 
       getStudentPayment(studentId, weekNum) {
@@ -765,16 +753,25 @@
 
       async deleteTransaction(txId) {
         if (!this.isAdmin) return;
-        const tx = this.data.transactions.find(t => String(t.id) === String(txId));
-        if (!tx) return;
+
+        // Cari indeks transaksi spesifik berdasarkan ID
+        const idx = this.data.transactions.findIndex(t => String(t.id) === String(txId));
+        if (idx === -1) return;
+
+        const tx = this.data.transactions[idx];
+
         if (confirm(`Hapus transaksi "${tx.description}" (${formatRupiah(tx.amount)})?`)) {
+          // Hapus referensi iuran siswa jika transaksi berasal dari iuran
           if (tx.studentPaymentRef && this.data.payments[tx.studentPaymentRef]) {
             delete this.data.payments[tx.studentPaymentRef];
           }
-          this.data.transactions = this.data.transactions.filter(t => t.id !== txId);
+
+          // Splice menjamin HANYA 1 data pada indeks tersebut yang dihapus
+          this.data.transactions.splice(idx, 1);
+
           await this.saveToCloud();
-          showToast('Transaksi dihapus.', 'info');
-          console.log('deleteTransaction called with');
+          render(); 
+          showToast('Transaksi berhasil dihapus.', 'info');
         }
       },
 
@@ -789,6 +786,20 @@
     // UTILITIES
     function formatRupiah(num) {
       return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num || 0);
+    }
+
+    function getMondaysInMonth(yearMonth) {
+      const [year, month] = yearMonth.split('-');
+      // Buat tanggal di hari pertama bulan tersebut
+      const date = new Date(year, parseInt(month) - 1, 1);
+      let count = 0;
+      
+      // Looping selama masih di bulan yang sama
+      while (date.getMonth() === parseInt(month) - 1) {
+        if (date.getDay() === 1) count++; // Angka 1 merepresentasikan hari Senin
+        date.setDate(date.getDate() + 1);
+      }
+      return count;
     }
 
     function showToast(msg, type = 'info') {
@@ -845,16 +856,31 @@
     function exportStudentsWeeklyCsv() {
       if (!state.data) return;
       const tariff = state.data.meta.weeklyTariff || 5000;
-      const rows = [['No', 'Nama Siswa', 'Minggu 1 (IDR)', 'Minggu 2 (IDR)', 'Minggu 3 (IDR)', 'Minggu 4 (IDR)', 'Total Bayar (IDR)', 'Status'].map(escapeCsv).join(',')];
+      const weekCount = getMondaysInMonth(state.currentMonth);
+      
+      // Build Header Array
+      const headers = ['No', 'Nama Siswa'];
+      for (let w = 1; w <= weekCount; w++) headers.push(`Minggu ${w} (IDR)`);
+      headers.push('Total Bayar (IDR)', 'Status');
+      
+      const rows = [headers.map(escapeCsv).join(',')];
+      
       state.data.students.forEach((s, idx) => {
-        const w1 = state.getStudentPayment(s.id, 1);
-        const w2 = state.getStudentPayment(s.id, 2);
-        const w3 = state.getStudentPayment(s.id, 3);
-        const w4 = state.getStudentPayment(s.id, 4);
-        const total = w1 + w2 + w3 + w4;
-        const status = total >= tariff * 4 ? 'Lunas Penuh (100%)' : total > 0 ? 'Sebagian' : 'Belum Bayar';
-        rows.push([idx + 1, s.name, w1, w2, w3, w4, total, status].map(escapeCsv).join(','));
+        let total = 0;
+        const rowData = [idx + 1, s.name];
+        
+        for (let w = 1; w <= weekCount; w++) {
+          const amt = state.getStudentPayment(s.id, w);
+          rowData.push(amt);
+          total += amt;
+        }
+        
+        const status = total >= tariff * weekCount ? 'Lunas Penuh (100%)' : total > 0 ? 'Sebagian' : 'Belum Bayar';
+        rowData.push(total, status);
+        
+        rows.push(rowData.map(escapeCsv).join(','));
       });
+      
       downloadCsv(rows.join('\r\n'), `Rekap_Iuran_${state.currentMonth}.csv`);
       showToast('Rekap iuran diunduh (CSV).', 'success');
     }
@@ -923,23 +949,33 @@
         `;
         desktop.innerHTML = html;
         mobile.innerHTML = html;
-        document.querySelectorAll('#btnLockAdmin').forEach(b => b.onclick = () => {
-          state.setAdmin(false);
-          showToast('Mode bendahara dikunci.', 'info');
+        document.querySelectorAll('#btnLockAdmin').forEach(b => b.onclick = async () => {
+          try {
+            await signOut(auth);
+            showToast('Sesi bendahara diakhiri (Logout sukses).', 'info');
+          } catch (error) {
+            showToast('Gagal logout: ' + error.message, 'error');
+          }
         });
       } else {
         notice.classList.remove('hidden');
         adminEls.forEach(el => el.classList.add('hidden'));
         const html = `
-          <button id="btnOpenLogin" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow-xs transition min-h-[38px] flex items-center space-x-1">
+          <button class="btn-open-login bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow-xs transition min-h-[38px] flex items-center space-x-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
             <span>Masuk PIN</span>
           </button>
         `;
         desktop.innerHTML = html;
         mobile.innerHTML = html;
-        document.querySelectorAll('#btnOpenLogin').forEach(b => b.onclick = () => {
-          document.getElementById('inputAdminPin').value = '';
+        
+        // Menggunakan selector class .btn-open-login agar berlaku di desktop & mobile
+        document.querySelectorAll('.btn-open-login').forEach(b => b.onclick = () => {
+          const emailInput = document.getElementById('inputAdminEmail');
+          const passInput = document.getElementById('inputAdminPassword');
+          if (emailInput) emailInput.value = '';
+          if (passInput) passInput.value = '';
+          
           document.getElementById('loginErrorMessage').classList.add('hidden');
           openModal('modalLogin');
         });
@@ -973,13 +1009,15 @@
       });
 
       const totalStudents = state.data.students.length;
-      const totalSlots = totalStudents * 4;
+      const weekCount = getMondaysInMonth(state.currentMonth); // Tambahkan ini
+      const totalSlots = totalStudents * weekCount; // Ganti * 4 menjadi * weekCount
       let paidFullSlots = 0;
       let partialSlots = 0;
       const tariff = state.data.meta.weeklyTariff || 5000;
 
       state.data.students.forEach(s => {
-        for (let w = 1; w <= 4; w++) {
+        // Ganti perulangannya menjadi weekCount
+        for (let w = 1; w <= weekCount; w++) {
           const amt = state.getStudentPayment(s.id, w);
           if (amt >= tariff) paidFullSlots++;
           else if (amt > 0) partialSlots++;
@@ -1034,13 +1072,36 @@
     function renderTracker() {
       const tbody = document.getElementById('studentTableBody');
       const mobileCards = document.getElementById('studentMobileCards');
+      const theadTr = document.getElementById('trackerTableHeader'); // Ambil elemen header yang sudah diberi ID
       const query = (document.getElementById('searchStudent').value || '').toLowerCase();
       const tariff = state.data.meta.weeklyTariff || 5000;
+      
+      // Ambil jumlah hari Senin di bulan yang sedang dipilih
+      const weekCount = getMondaysInMonth(state.currentMonth);
+
+      // 1. RENDER HEADER TABEL DINAMIS (Menyesuaikan dengan styling aslimu)
+      if (theadTr) {
+        let theadHtml = `
+          <th class="py-3 px-4 w-12 text-center">No</th>
+          <th class="py-3 px-4 min-w-[180px]">Nama Siswa</th>
+        `;
+        
+        for (let w = 1; w <= weekCount; w++) {
+          theadHtml += `<th class="py-3 px-3 text-center w-28">Minggu ${w}</th>`;
+        }
+        
+        theadHtml += `
+          <th class="py-3 px-4 text-right w-32">Total Bayar</th>
+          <th class="py-3 px-3 text-center w-28">Status</th>
+        `;
+        theadTr.innerHTML = theadHtml;
+      }
 
       const filtered = state.data.students.filter(s => s.name.toLowerCase().includes(query));
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-zinc-400">Tidak ada siswa yang cocok.</td></tr>`;
+        // Colspan otomatis menyesuaikan jumlah kolom: (No, Nama, Total, Status = 4) + jumlah minggu
+        tbody.innerHTML = `<tr><td colspan="${4 + weekCount}" class="py-8 text-center text-zinc-400">Tidak ada siswa yang cocok.</td></tr>`;
         mobileCards.innerHTML = `<div class="p-6 text-center text-zinc-400 bg-white rounded-2xl border border-zinc-200 text-xs">Tidak ada siswa yang cocok.</div>`;
         return;
       }
@@ -1053,7 +1114,8 @@
         let weekCells = '';
         let mobileWeekButtons = '';
 
-        for (let w = 1; w <= 4; w++) {
+        // 2. UBAH ANGKA 4 MENJADI weekCount
+        for (let w = 1; w <= weekCount; w++) {
           const amt = state.getStudentPayment(std.id, w);
           totalPaid += amt;
           weekCells += `<td class="py-2 px-2 text-center">${getWeekCellBadge(amt, tariff, std.id, w)}</td>`;
@@ -1065,7 +1127,8 @@
           `;
         }
 
-        const isFullPaid = totalPaid >= tariff * 4;
+        // 3. LOGIKA LUNAS JUGA MENGIKUTI weekCount (Bukan dikali 4 lagi)
+        const isFullPaid = totalPaid >= tariff * weekCount;
         const isPartial = totalPaid > 0 && !isFullPaid;
         const statusBadge = isFullPaid
           ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">Lunas</span>`
@@ -1366,48 +1429,49 @@
         if (confirm('Yakin ingin mereset seluruh data kas ke bawaan?')) state.resetData();
       };
 
-      // Login Modal
+      // ===========================
+      // Login Modal (Firebase Auth)
+      // ===========================
       document.getElementById('bannerLoginLink').onclick = () => {
-        document.getElementById('inputAdminPin').value = '';
+        document.getElementById('inputAdminEmail').value = '';
+        document.getElementById('inputAdminPassword').value = '';
         document.getElementById('loginErrorMessage').classList.add('hidden');
         openModal('modalLogin');
       };
+      // Jika di UI ada tombol '#btnOpenLogin', hapus juga logika modal lama dan panggil openModal('modalLogin')
+
       document.getElementById('btnCloseLoginModal').onclick = () => closeModal('modalLogin');
       document.getElementById('btnCancelLoginModal').onclick = () => closeModal('modalLogin');
-      document.getElementById('formLoginPin').onsubmit = (e) => {
+      
+      document.getElementById('formLoginAuth').onsubmit = async (e) => {
         e.preventDefault();
-        const pin = document.getElementById('inputAdminPin').value;
-        if (pin === state.adminPin) {
-          state.setAdmin(true);
+        const email = document.getElementById('inputAdminEmail').value;
+        const password = document.getElementById('inputAdminPassword').value;
+        const btnSubmit = document.getElementById('btnSubmitLogin');
+        const errorMsg = document.getElementById('loginErrorMessage');
+
+        try {
+          // Loading state
+          btnSubmit.textContent = 'Memuat...';
+          btnSubmit.disabled = true;
+          errorMsg.classList.add('hidden');
+
+          // Proses Autentikasi Firebase
+          await signInWithEmailAndPassword(auth, email, password);
+          
           closeModal('modalLogin');
           showToast('Selamat datang, Bendahara!', 'success');
-        } else {
-          document.getElementById('loginErrorMessage').classList.remove('hidden');
+        } catch (error) {
+          console.error("Login Error:", error);
+          errorMsg.textContent = 'Gagal: Email atau Password salah.';
+          errorMsg.classList.remove('hidden');
+        } finally {
+          // Kembalikan tombol seperti semula
+          btnSubmit.textContent = 'Buka Akses';
+          btnSubmit.disabled = false;
         }
       };
-
-      // Change PIN Modal
-      document.getElementById('btnOpenChangePinModal').onclick = () => {
-        document.getElementById('inputOldPin').value = '';
-        document.getElementById('inputNewPin').value = '';
-        document.getElementById('changePinErrorMessage').classList.add('hidden');
-        openModal('modalChangePin');
-      };
-      document.getElementById('btnCloseChangePinModal').onclick = () => closeModal('modalChangePin');
-      document.getElementById('btnCancelChangePinModal').onclick = () => closeModal('modalChangePin');
-      document.getElementById('formChangePin').onsubmit = (e) => {
-        e.preventDefault();
-        const oldP = document.getElementById('inputOldPin').value;
-        const newP = document.getElementById('inputNewPin').value;
-        if (oldP !== state.adminPin) {
-          const err = document.getElementById('changePinErrorMessage');
-          err.textContent = 'PIN lama salah!';
-          err.classList.remove('hidden');
-          return;
-        }
-        state.changePin(newP);
-        closeModal('modalChangePin');
-      };
+      // HAPUS SEMUA EVENT // Change PIN Modal (btnOpenChangePinModal, dll) karena sudah tidak dipakai.
 
       // Nominal Payment Modal
       document.getElementById('btnClosePaymentModal').onclick = () => closeModal('modalPaymentEntry');

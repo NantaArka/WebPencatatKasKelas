@@ -1,0 +1,13 @@
+# Folder dependensi (ukuran besar)
+node_modules/
+
+# File konfigurasi rahasia
+.env
+
+# Folder hasil build/kompilasi
+dist/
+build/
+
+# File sampah sistem operasi
+.DS_Store
+Thumbs.db
